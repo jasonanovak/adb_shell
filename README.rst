@@ -45,6 +45,49 @@ To connect to a device via USB, install this package via:
    pip install adb-shell[usb]
 
 
+Wi-Fi Pairing Support (Experimental)
+************************************
+
+To pair with a modern Android device using a 6-digit pairing code (Android 11+
+"Wireless debugging"), install this package via:
+
+.. code-block::
+
+   pip install adb-shell[wifi]
+
+This pulls in ``spake2-cffi`` and ``pyOpenSSL``. Note: ``spake2-cffi`` does
+not publish Windows wheels, so Windows users will need a C toolchain
+available at install time.
+
+On the device, open ``Settings > System > Developer options > Wireless
+debugging > Pair device with pairing code``. Note the IP address, port, and
+6-digit code shown by the device, then:
+
+.. code-block:: python
+
+   from adb_shell.pairing import pair
+
+   adbkey = "path/to/adbkey"
+   with open(adbkey, "rb") as f:
+       priv = f.read()
+   with open(adbkey + ".pub", "rb") as f:
+       pub = f.read()
+
+   peer_info = pair(
+       host="192.168.1.42",   # from device UI
+       port=43811,            # from device UI
+       pairing_code="515109", # from device UI
+       private_key_pem=priv,
+       public_key=pub,
+   )
+   print("device peer info:", peer_info.type, peer_info.data)
+
+After pairing succeeds, the device records the host's public key in its
+keystore. (Establishing an actual ADB connection over the post-pairing
+TLS data channel — required for ``shell``, ``push``, ``pull`` — is not yet
+supported and will be added in a follow-up.)
+
+
 Example Usage
 -------------
 

@@ -17,4 +17,6 @@ cryptography
 libusb1
 pyasn1
 pycryptodome
+pyOpenSSL
 rsa
+spake2-cffi
