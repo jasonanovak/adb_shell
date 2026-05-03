@@ -20,7 +20,7 @@ setup(
     extras_require={
         "usb": ["libusb1>=1.0.16"],
         "async": ["aiofiles>=0.4.0", "async_timeout>=3.0.0"],
-        "wifi": ["spake2-cffi>=1.0.0", "pyOpenSSL>=22.0.0"],
+        "wifi": ["spake2-cffi>=1.0.0", "pyOpenSSL>=22.0.0", "zeroconf>=0.39"],
     },
     classifiers=[
         "Operating System :: OS Independent",

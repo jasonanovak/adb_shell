@@ -83,9 +83,28 @@ debugging > Pair device with pairing code``. Note the IP address, port, and
    print("device peer info:", peer_info.type, peer_info.data)
 
 After pairing succeeds, the device records the host's public key in its
-keystore. (Establishing an actual ADB connection over the post-pairing
-TLS data channel — required for ``shell``, ``push``, ``pull`` — is not yet
-supported and will be added in a follow-up.)
+keystore. To actually run shell commands, push, pull, etc. over the
+post-pairing TLS channel, use :class:`AdbDeviceTls` and pass the same
+``adbkey`` PEM as ``tls_priv_pem``:
+
+.. code-block:: python
+
+   from adb_shell.adb_device import AdbDeviceTls
+   from adb_shell.mdns import discover_connect_services
+
+   # Find the random port the device chose for its TLS data socket.
+   services = discover_connect_services(timeout_s=4.0)
+   svc = services[0]   # or pick the right device by name/host
+
+   device = AdbDeviceTls(svc.host, svc.port, default_transport_timeout_s=10.0)
+   device.connect(rsa_keys=[], tls_priv_pem=priv, auth_timeout_s=10.0)
+   print(device.shell("echo hello from adb_shell"))
+   device.close()
+
+The ``mdns`` module also exposes ``discover_pairing_services()`` for
+finding devices that currently have a pairing dialog open, plus async
+equivalents (``discover_connect_services_async``,
+``discover_pairing_services_async``).
 
 
 Example Usage

@@ -20,3 +20,4 @@ pycryptodome
 pyOpenSSL
 rsa
 spake2-cffi
+zeroconf
