@@ -89,7 +89,7 @@ debugging > Pair device with pairing code``. Note the IP address, port, and
 
 After pairing succeeds, the device records the host's public key in its
 keystore. To actually run shell commands, push, pull, etc. over the
-post-pairing TLS channel, use :class:`AdbDeviceTls` and pass the same
+post-pairing TLS channel, use ``AdbDeviceTls`` and pass the same
 ``adbkey`` PEM as ``tls_priv_pem``:
 
 .. code-block:: python
