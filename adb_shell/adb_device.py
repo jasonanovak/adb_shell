@@ -91,6 +91,11 @@ try:
 except (ImportError, OSError):
     UsbTransport = None
 
+try:
+    from .transport.tls_transport import TlsTransport
+except ImportError:  # pragma: no cover - depends on optional [wifi] extra
+    TlsTransport = None
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -162,23 +167,63 @@ class _AdbIOManager(object):
             with self._store_lock:
                 self._packet_store.clear_all()
 
-    def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info):
+    def _do_stls_upgrade(self, banner, tls_priv_pem, adb_info):
+        """Reply to a device-initiated ``A_STLS`` and upgrade the transport.
+
+        Sends our own ``A_STLS`` packet (the protocol's TLS-handshake
+        request) and then asks the transport to wrap itself in TLS 1.3
+        using a self-signed cert backed by ``tls_priv_pem``.
+        """
+        del banner  # not part of the STLS protocol payload
+        if tls_priv_pem is None:
+            self._transport.close()
+            raise exceptions.DeviceAuthError(
+                'Device greeted with A_STLS but no tls_priv_pem was supplied; '
+                'the device requires Wi-Fi debugging TLS — pass the contents of '
+                'your adbkey file as tls_priv_pem.'
+            )
+        if not hasattr(self._transport, 'tls_upgrade'):
+            self._transport.close()
+            raise exceptions.DeviceAuthError(
+                'Device greeted with A_STLS but the active transport does not '
+                'support tls_upgrade; use AdbDeviceTls or supply a TlsTransport.'
+            )
+
+        # Defer importing the TLS helpers until we actually need them so the
+        # stock USB / TCP code paths don't pay for the [wifi] extra.
+        from .auth.x509 import (  # pylint: disable=import-outside-toplevel
+            certificate_to_pem,
+            generate_x509_certificate,
+            load_rsa_private_key_pem,
+            private_key_to_pem,
+        )
+
+        rsa_key = load_rsa_private_key_pem(tls_priv_pem)
+        cert_pem = certificate_to_pem(generate_x509_certificate(rsa_key))
+        # Re-serialize to PKCS#8 PEM in case the caller passed PKCS#1.
+        key_pem = private_key_to_pem(rsa_key)
+
+        # Send our STLS reply (no payload) before starting the TLS handshake;
+        # this matches the C++ host's send_tls_request().
+        reply = AdbMessage(constants.STLS, constants.STLS_VERSION, 0, b'')
+        self._send(reply, adb_info)
+
+        self._transport.tls_upgrade(cert_pem, key_pem)
+
+    def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info, tls_priv_pem=None):
         """Establish an ADB connection to the device.
 
-        1. Use the transport to establish a connection
-        2. Send a ``b'CNXN'`` message
-        3. Read the response from the device
-        4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
-        5. If no ``rsa_keys`` are provided, raise an exception
-        6. Loop through our keys, signing the last ``banner2`` that we received
+        Supports three flows depending on what the device greets us with:
 
-            1. If the last ``arg0`` was not :const:`adb_shell.constants.AUTH_TOKEN`, raise an exception
-            2. Sign the last ``banner2`` and send it in an ``b'AUTH'`` message
-            3. Read the response from the device
-            4. If ``cmd`` is ``b'CNXN'``, we are done
-
-        7. None of the keys worked, so send ``rsa_keys[0]``'s public key; if the response does not time out, we must have connected successfully
-
+        * Legacy ``A_AUTH`` flow (USB / unencrypted ``adb tcpip``) — sign
+          the device's challenge with one of ``rsa_keys`` and complete the
+          handshake.
+        * Modern ``A_STLS`` flow (Android Wi-Fi debugging, post-pairing) —
+          send our own ``A_STLS`` reply, upgrade the transport to TLS 1.3,
+          then read the device's post-handshake ``A_CNXN`` to finish.
+          Requires ``tls_priv_pem`` to be supplied and the underlying
+          transport to expose a ``tls_upgrade`` method.
+        * Already-authenticated (``A_CNXN`` direct) — done.
 
         Parameters
         ----------
@@ -193,6 +238,9 @@ class _AdbIOManager(object):
             Function callback invoked when the connection needs to be accepted on the device
         adb_info : _AdbTransactionInfo
             Info and settings for this connection attempt
+        tls_priv_pem : bytes, None
+            PEM-encoded RSA private key (the user's ``adbkey`` file). Required
+            when the device greets us with ``A_STLS``; ignored otherwise.
 
         Returns
         -------
@@ -225,7 +273,18 @@ class _AdbIOManager(object):
             self._send(msg, adb_info)
 
             # 3. Read the response from the device
-            cmd, arg0, maxdata, banner2 = self._read_expected_packet_from_device([constants.AUTH, constants.CNXN], adb_info)
+            cmd, arg0, maxdata, banner2 = self._read_expected_packet_from_device(
+                [constants.AUTH, constants.CNXN, constants.STLS], adb_info,
+            )
+
+            # 3a. If the device requires TLS, run the A_STLS handshake.
+            if cmd == constants.STLS:
+                self._do_stls_upgrade(banner, tls_priv_pem, adb_info)
+                # Post-TLS the device sends A_CNXN with its own banner; that
+                # signals end-of-handshake. Use auth_timeout_s as the budget.
+                adb_info.transport_timeout_s = auth_timeout_s
+                _, _, maxdata, _ = self._read_expected_packet_from_device([constants.CNXN], adb_info)
+                return True, maxdata
 
             # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
             if cmd != constants.AUTH:
@@ -635,7 +694,7 @@ class AdbDevice(object):
         self._available = False
         self._io_manager.close()
 
-    def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
+    def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None, tls_priv_pem=None):
         """Establish an ADB connection to the device.
 
         See :meth:`_AdbIOManager.connect`.
@@ -672,7 +731,10 @@ class AdbDevice(object):
         self._available = False
 
         # Use the IO manager to connect
-        self._available, self._maxdata = self._io_manager.connect(self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info)
+        self._available, self._maxdata = self._io_manager.connect(
+            self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info,
+            tls_priv_pem=tls_priv_pem,
+        )
 
         return self._available
 
@@ -1502,6 +1564,37 @@ class AdbDeviceTcp(AdbDevice):
     def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
         transport = TcpTransport(host, port)
         super(AdbDeviceTcp, self).__init__(transport, default_transport_timeout_s, banner)
+
+
+class AdbDeviceTls(AdbDevice):
+    """A class for connecting to a paired Android device's wireless-debugging port.
+
+    The transport stays unencrypted until the device greets the connection
+    with ``A_STLS``, at which point ``connect()`` upgrades to TLS 1.3 using
+    a self-signed cert backed by the user's ``adbkey``. Requires the
+    ``[wifi]`` extra and ``tls_priv_pem`` to be passed to ``connect()``.
+
+    Parameters
+    ----------
+    host : str
+        The address of the device.
+    port : int
+        The TCP port — typically the random port from the device's
+        ``_adb-tls-connect._tcp`` mDNS advertisement.
+    default_transport_timeout_s : float, None
+        Default timeout in seconds for TCP / TLS packets, or ``None``.
+    banner : str, bytes, None
+        Optional hostname banner.
+    """
+
+    def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
+        if TlsTransport is None:
+            raise exceptions.InvalidTransportError(
+                'TlsTransport is unavailable; install adb_shell with the '
+                '[wifi] extra (pip install adb_shell[wifi]) to enable it.'
+            )
+        transport = TlsTransport(host, port)
+        super(AdbDeviceTls, self).__init__(transport, default_transport_timeout_s, banner)
 
 
 class AdbDeviceUsb(AdbDevice):

@@ -89,6 +89,11 @@ from .transport.base_transport_async import BaseTransportAsync
 from .transport.tcp_transport_async import TcpTransportAsync
 from .hidden_helpers import DeviceFile, _AdbPacketStore, _AdbTransactionInfo, _FileSyncTransactionInfo, get_banner, get_files_to_push
 
+try:
+    from .transport.tls_transport_async import TlsTransportAsync
+except ImportError:  # pragma: no cover - depends on optional [wifi] extra
+    TlsTransportAsync = None
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -199,7 +204,40 @@ class _AdbIOManagerAsync(object):
             async with self._store_lock:
                 self._packet_store.clear_all()
 
-    async def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info):
+    async def _do_stls_upgrade(self, banner, tls_priv_pem, adb_info):
+        """Async version of :meth:`_AdbIOManager._do_stls_upgrade`."""
+        del banner
+        if tls_priv_pem is None:
+            await self._transport.close()
+            raise exceptions.DeviceAuthError(
+                'Device greeted with A_STLS but no tls_priv_pem was supplied; '
+                'the device requires Wi-Fi debugging TLS — pass the contents of '
+                'your adbkey file as tls_priv_pem.'
+            )
+        if not hasattr(self._transport, 'tls_upgrade'):
+            await self._transport.close()
+            raise exceptions.DeviceAuthError(
+                'Device greeted with A_STLS but the active transport does not '
+                'support tls_upgrade; use AdbDeviceTlsAsync or supply a TlsTransportAsync.'
+            )
+
+        from .auth.x509 import (  # pylint: disable=import-outside-toplevel
+            certificate_to_pem,
+            generate_x509_certificate,
+            load_rsa_private_key_pem,
+            private_key_to_pem,
+        )
+
+        rsa_key = load_rsa_private_key_pem(tls_priv_pem)
+        cert_pem = certificate_to_pem(generate_x509_certificate(rsa_key))
+        key_pem = private_key_to_pem(rsa_key)
+
+        reply = AdbMessage(constants.STLS, constants.STLS_VERSION, 0, b'')
+        await self._send(reply, adb_info)
+
+        await self._transport.tls_upgrade(cert_pem, key_pem)
+
+    async def connect(self, banner, rsa_keys, auth_timeout_s, auth_callback, adb_info, tls_priv_pem=None):
         """Establish an ADB connection to the device.
 
         1. Use the transport to establish a connection
@@ -262,7 +300,16 @@ class _AdbIOManagerAsync(object):
             await self._send(msg, adb_info)
 
             # 3. Read the response from the device
-            cmd, arg0, maxdata, banner2 = await self._read_expected_packet_from_device([constants.AUTH, constants.CNXN], adb_info)
+            cmd, arg0, maxdata, banner2 = await self._read_expected_packet_from_device(
+                [constants.AUTH, constants.CNXN, constants.STLS], adb_info,
+            )
+
+            # 3a. Modern Wi-Fi debugging path: STLS handshake + TLS upgrade.
+            if cmd == constants.STLS:
+                await self._do_stls_upgrade(banner, tls_priv_pem, adb_info)
+                adb_info.transport_timeout_s = auth_timeout_s
+                _, _, maxdata, _ = await self._read_expected_packet_from_device([constants.CNXN], adb_info)
+                return True, maxdata
 
             # 4. If ``cmd`` is not ``b'AUTH'``, then authentication is not necesary and so we are done
             if cmd != constants.AUTH:
@@ -674,7 +721,7 @@ class AdbDeviceAsync(object):
         self._available = False
         await self._io_manager.close()
 
-    async def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None):
+    async def connect(self, rsa_keys=None, transport_timeout_s=None, auth_timeout_s=constants.DEFAULT_AUTH_TIMEOUT_S, read_timeout_s=constants.DEFAULT_READ_TIMEOUT_S, auth_callback=None, tls_priv_pem=None):
         """Establish an ADB connection to the device.
 
         See :meth:`_AdbIOManagerAsync.connect`.
@@ -711,7 +758,10 @@ class AdbDeviceAsync(object):
         self._available = False
 
         # Use the IO manager to connect
-        self._available, self._maxdata = await self._io_manager.connect(self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info)
+        self._available, self._maxdata = await self._io_manager.connect(
+            self._banner, rsa_keys, auth_timeout_s, auth_callback, adb_info,
+            tls_priv_pem=tls_priv_pem,
+        )
 
         return self._available
 
@@ -1545,3 +1595,34 @@ class AdbDeviceTcpAsync(AdbDeviceAsync):
     def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
         transport = TcpTransportAsync(host, port)
         super(AdbDeviceTcpAsync, self).__init__(transport, default_transport_timeout_s, banner)
+
+
+class AdbDeviceTlsAsync(AdbDeviceAsync):
+    """Async client for a paired Android device's wireless-debugging port.
+
+    Same flow as the synchronous AdbDeviceTls but built on asyncio.
+    Requires the ``[wifi]`` extra; pass the user's adbkey PEM as
+    ``tls_priv_pem`` to :meth:`AdbDeviceAsync.connect`.
+
+    Parameters
+    ----------
+    host : str
+        The address of the device.
+    port : int
+        The TCP port — typically the random port advertised by the
+        device's ``_adb-tls-connect._tcp`` mDNS service.
+    default_transport_timeout_s : float, None
+        Default timeout in seconds for TCP / TLS packets, or ``None``.
+    banner : str, bytes, None
+        Optional hostname banner.
+    """
+
+    def __init__(self, host, port=5555, default_transport_timeout_s=None, banner=None):
+        if TlsTransportAsync is None:
+            raise exceptions.InvalidTransportError(
+                'TlsTransportAsync is unavailable; install adb_shell with the '
+                '[wifi] extra (pip install adb_shell[wifi]) to enable it.'
+            )
+        transport = TlsTransportAsync(host, port)
+        super(AdbDeviceTlsAsync, self).__init__(transport, default_transport_timeout_s, banner)
+
