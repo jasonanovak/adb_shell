@@ -1,7 +1,7 @@
 import unittest
 
-from adb_shell import constants
-from adb_shell.hidden_helpers import _AdbPacketStore, _AdbTransactionInfo
+from adb_shell_wifi import constants
+from adb_shell_wifi.hidden_helpers import _AdbPacketStore, _AdbTransactionInfo
 
 
 class TestAdbPacketStore(unittest.TestCase):

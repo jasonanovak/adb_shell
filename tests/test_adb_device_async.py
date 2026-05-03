@@ -6,11 +6,11 @@ import sys
 import unittest
 from unittest.mock import mock_open, patch
 
-from adb_shell import adb_device_async, constants, exceptions
-from adb_shell.adb_device_async import AdbDeviceAsync, AdbDeviceTcpAsync, DeviceFile
-from adb_shell.adb_message import AdbMessage
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+from adb_shell_wifi import adb_device_async, constants, exceptions
+from adb_shell_wifi.adb_device_async import AdbDeviceAsync, AdbDeviceTcpAsync, DeviceFile
+from adb_shell_wifi.adb_message import AdbMessage
+from adb_shell_wifi.auth.keygen import keygen
+from adb_shell_wifi.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
 from .async_patchers import PATCH_TCP_TRANSPORT_ASYNC, FakeTcpTransportAsync, async_patch, async_mock_open
@@ -20,7 +20,7 @@ from .keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
-_LOGGER = logging.getLogger('adb_shell.adb_device_async')
+_LOGGER = logging.getLogger('adb_shell_wifi.adb_device_async')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
@@ -180,7 +180,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_key_invalid_response(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -193,7 +193,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -203,7 +203,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_new_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -214,7 +214,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
     @awaiter
     async def test_connect_with_new_key_and_callback(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -508,7 +508,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
             await asyncio.sleep(0.2)
             return b'WRTE', b'PA'
 
-        with patch('adb_shell.adb_device_async.AdbDeviceAsync._read_until', fake_read_until):
+        with patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync._read_until', fake_read_until):
             with self.assertRaises(exceptions.AdbTimeoutError):
                 await self.device.shell('TEST', timeout_s=0.5)
 
@@ -530,7 +530,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     @awaiter
     async def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -650,7 +650,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def test_reboot(self):
         self.assertTrue(await self.device.connect())
 
-        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._open') as patch_open:
+        with async_patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync._open') as patch_open:
             await self.device.reboot()
             patch_open.assert_called_once()
 
@@ -664,7 +664,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
     async def test_root(self):
         self.assertTrue(await self.device.connect())
 
-        with async_patch('adb_shell.adb_device_async.AdbDeviceAsync._service') as patch_service:
+        with async_patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync._service') as patch_service:
             await self.device.root()
             patch_service.assert_called_once()
 
@@ -773,7 +773,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with patch('aiofiles.open', async_mock_open(read_data=filedata)):
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
                 await self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(self.transport.bulk_write_data, expected_bulk_write)
@@ -831,7 +831,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with patch('aiofiles.open', async_mock_open(read_data=filedata)):
             # Set self.progress_callback_count to None so that an exception occurs when self.progress_callback tries to increment it
             self.progress_callback_count = None
-            with patch("adb_shell.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
                 await self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
 
             self.assertIsNone(self.progress_callback_count)
@@ -898,7 +898,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with patch('aiofiles.open', async_mock_open(read_data=filedata)):
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device_async.os.fstat", return_value=patchers.StSize(12345)):
                 await self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 4)
             self.assertEqual(self.transport.bulk_write_data, expected_bulk_write)
@@ -965,7 +965,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with patch('aiofiles.open', async_mock_open()) as m:
             self.assertEqual(self.progress_callback_count, 0)
-            with patch('adb_shell.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
+            with patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
                 await self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
 
             self.assertEqual(self.progress_callback_count, 1)
@@ -1023,7 +1023,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
         with patch('aiofiles.open', async_mock_open()) as m:
             # Set self.progress_callback_count to None so that an exception occurs when self.progress_callback tries to increment it
             self.progress_callback_count = None
-            with patch('adb_shell.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
+            with patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
                 await self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
 
             self.assertIsNone(self.progress_callback_count)
@@ -1053,7 +1053,7 @@ class TestAdbDeviceAsync(unittest.TestCase):
 
         with patch('aiofiles.open', async_mock_open()) as m:
             self.assertEqual(self.progress_callback_count, 0)
-            with patch('adb_shell.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
+            with patch('adb_shell_wifi.adb_device_async.AdbDeviceAsync.stat', self.fake_stat):
                 await self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
 
             self.assertEqual(self.progress_callback_count, 1)

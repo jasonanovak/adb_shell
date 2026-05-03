@@ -8,7 +8,7 @@ try:
 except ImportError:
     import mock
 
-import adb_shell.exceptions
+import adb_shell_wifi.exceptions
 
 try:
     getargspec = inspect.getfullargspec
@@ -38,7 +38,7 @@ class TestExceptionSerialization(unittest.TestCase):
         pickled_exc_data = pickle.dumps(exc_obj)
         depickled_exc_obj = pickle.loads(pickled_exc_data)
 
-    for __obj in adb_shell.exceptions.__dict__.values():
+    for __obj in adb_shell_wifi.exceptions.__dict__.values():
         if isinstance(__obj, type) and issubclass(__obj, BaseException):
             __test_method = functools.partial(
                 __test_serialize_one_exc_cls, __obj
@@ -51,14 +51,14 @@ class TestExceptionSerialization(unittest.TestCase):
     # `Exception`
     def test_usbreadfailederror_as_str(self):
         exc_args = (mock.sentinel.error_msg, mock.sentinel.usb1_exc_obj)
-        exc_obj = adb_shell.exceptions.UsbReadFailedError(*exc_args)
+        exc_obj = adb_shell_wifi.exceptions.UsbReadFailedError(*exc_args)
         expected_str = "{}: {}".format(*exc_args)
         _assertRegex(self, str(exc_obj), re.escape(expected_str))
 
     def test_usbreadfailederror_as_repr(self):
         exc_args = (mock.sentinel.error_msg, mock.sentinel.usb1_exc_obj)
-        exc_obj = adb_shell.exceptions.UsbReadFailedError(*exc_args)
+        exc_obj = adb_shell_wifi.exceptions.UsbReadFailedError(*exc_args)
         expected_repr = "{}{!r}".format(
-            adb_shell.exceptions.UsbReadFailedError.__name__, exc_args
+            adb_shell_wifi.exceptions.UsbReadFailedError.__name__, exc_args
         )
         _assertRegex(self, repr(exc_obj), re.escape(expected_repr))

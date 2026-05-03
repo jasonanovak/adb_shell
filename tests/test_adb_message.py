@@ -6,9 +6,9 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell import constants
-from adb_shell.adb_device import AdbDevice
-from adb_shell.adb_message import AdbMessage, checksum, int_to_cmd, unpack
+from adb_shell_wifi import constants
+from adb_shell_wifi.adb_device import AdbDevice
+from adb_shell_wifi.adb_message import AdbMessage, checksum, int_to_cmd, unpack
 
 
 class TestAdbMessage(unittest.TestCase):

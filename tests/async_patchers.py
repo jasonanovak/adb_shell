@@ -5,9 +5,9 @@ except ImportError:
 
 from unittest.mock import patch
 
-from adb_shell import constants
-from adb_shell.adb_message import AdbMessage, unpack
-from adb_shell.transport.tcp_transport_async import TcpTransportAsync
+from adb_shell_wifi import constants
+from adb_shell_wifi.adb_message import AdbMessage, unpack
+from adb_shell_wifi.transport.tcp_transport_async import TcpTransportAsync
 
 try:
     from unittest.mock import AsyncMock
@@ -100,7 +100,7 @@ class FakeTcpTransportAsync(TcpTransportAsync):
 
 
 # `TcpTransport` patches
-PATCH_TCP_TRANSPORT_ASYNC = patch('adb_shell.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
+PATCH_TCP_TRANSPORT_ASYNC = patch('adb_shell_wifi.adb_device_async.TcpTransportAsync', FakeTcpTransportAsync)
 
 
 def async_patch(*args, **kwargs):

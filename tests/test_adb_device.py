@@ -11,11 +11,11 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell import adb_device, constants, exceptions
-from adb_shell.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
-from adb_shell.adb_message import AdbMessage
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+from adb_shell_wifi import adb_device, constants, exceptions
+from adb_shell_wifi.adb_device import AdbDevice, AdbDeviceTcp, DeviceFile
+from adb_shell_wifi.adb_message import AdbMessage
+from adb_shell_wifi.auth.keygen import keygen
+from adb_shell_wifi.auth.sign_pythonrsa import PythonRSASigner
 
 from . import patchers
 from .filesync_helpers import FileSyncMessage, FileSyncListMessage, FileSyncStatMessage
@@ -23,7 +23,7 @@ from .keygen_stub import open_priv_pub
 
 
 # https://stackoverflow.com/a/7483862
-_LOGGER = logging.getLogger('adb_shell.adb_device')
+_LOGGER = logging.getLogger('adb_shell_wifi.adb_device')
 _LOGGER.setLevel(logging.DEBUG)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 
@@ -173,7 +173,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertFalse(self.device.available)
 
     def test_connect_with_key_invalid_response(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -185,7 +185,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertFalse(self.device.available)
 
     def test_connect_with_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -194,7 +194,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect([signer]))
 
     def test_connect_with_new_key(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -204,7 +204,7 @@ class TestAdbDevice(unittest.TestCase):
         self.assertTrue(self.device.connect([signer]))
 
     def test_connect_with_new_key_and_callback(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
             signer.pub_key = u''
@@ -478,7 +478,7 @@ class TestAdbDevice(unittest.TestCase):
             time.sleep(0.2)
             return b'WRTE', b'PA'
 
-        with patch('adb_shell.adb_device.AdbDevice._read_until', fake_read_until):
+        with patch('adb_shell_wifi.adb_device.AdbDevice._read_until', fake_read_until):
             with self.assertRaises(exceptions.AdbTimeoutError):
                 self.device.shell('TEST', timeout_s=0.5)
 
@@ -498,7 +498,7 @@ class TestAdbDevice(unittest.TestCase):
 
     def test_issue29(self):
         # https://github.com/JeffLIrion/adb_shell/issues/29
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -615,7 +615,7 @@ class TestAdbDevice(unittest.TestCase):
     def test_reboot(self):
         self.assertTrue(self.device.connect())
 
-        with patch('adb_shell.adb_device.AdbDevice._open') as patch_open:
+        with patch('adb_shell_wifi.adb_device.AdbDevice._open') as patch_open:
             self.device.reboot()
             assert patch_open.call_count == 1
 
@@ -628,7 +628,7 @@ class TestAdbDevice(unittest.TestCase):
     def test_root(self):
         self.assertTrue(self.device.connect())
 
-        with patch('adb_shell.adb_device.AdbDevice._service') as patch_service:
+        with patch('adb_shell_wifi.adb_device.AdbDevice._service') as patch_service:
             self.device.root()
             assert patch_service.call_count == 1
 
@@ -703,7 +703,7 @@ class TestAdbDevice(unittest.TestCase):
                                                       AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                                       AdbMessage(command=constants.WRTE, arg0=1, arg1=1, data=join_messages(FileSyncMessage(constants.FAIL, data=b''))))
 
-        with self.assertRaises(exceptions.PushFailedError), patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+        with self.assertRaises(exceptions.PushFailedError), patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
 
     def test_push_file(self):
@@ -727,9 +727,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device.os.fstat", return_value=patchers.StSize(12345)):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 1)
             self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
@@ -780,10 +780,10 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)):
             # Set self.progress_callback_count to None so that an exception occurs when self.progress_callback tries to increment it
             self.progress_callback_count = None
-            with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device.os.fstat", return_value=patchers.StSize(12345)):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             
             self.assertIsNone(self.progress_callback_count)
@@ -810,7 +810,7 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('time.time', return_value=mtime):
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)), patch('time.time', return_value=mtime):
             self.device.push('TEST_FILE', '/data', mtime=mtime)
             self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
 
@@ -844,9 +844,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)):
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)):
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device.os.fstat", return_value=patchers.StSize(12345)):
+            with patch("adb_shell_wifi.adb_device.os.fstat", return_value=patchers.StSize(12345)):
                 self.device.push('TEST_FILE', '/data', mtime=mtime, progress_callback=self.progress_callback)
             self.assertEqual(self.progress_callback_count, 4)
             self.assertEqual(expected_bulk_write, self.transport.bulk_write_data)
@@ -872,7 +872,7 @@ class TestAdbDevice(unittest.TestCase):
         # Expected `bulk_write` values
         #TODO
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open(read_data=filedata)), patch('os.path.isdir', lambda x: x == 'TEST_DIR/'), patch('os.listdir', return_value=['TEST_FILE1', 'TEST_FILE2']):
             self.device.push('TEST_DIR/', '/data', mtime=mtime)
 
     def test_push_empty_path(self):
@@ -906,9 +906,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open()) as m:
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open()) as m:
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device.AdbDevice.stat", self.fake_stat):
+            with patch("adb_shell_wifi.adb_device.AdbDevice.stat", self.fake_stat):
                 self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
 
             self.assertEqual(self.progress_callback_count, 1)
@@ -959,10 +959,10 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open()) as m:
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open()) as m:
             # Set self.progress_callback_count to None so that an exception occurs when self.progress_callback tries to increment it
             self.progress_callback_count = None
-            with patch("adb_shell.adb_device.AdbDevice.stat", self.fake_stat):
+            with patch("adb_shell_wifi.adb_device.AdbDevice.stat", self.fake_stat):
                 self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
 
             self.assertIsNone(self.progress_callback_count)
@@ -988,9 +988,9 @@ class TestAdbDevice(unittest.TestCase):
                                             AdbMessage(command=constants.OKAY, arg0=1, arg1=1, data=b''),
                                             AdbMessage(command=constants.CLSE, arg0=1, arg1=1, data=b''))
 
-        with patch('adb_shell.adb_device.open', patchers.mock_open()) as m:
+        with patch('adb_shell_wifi.adb_device.open', patchers.mock_open()) as m:
             self.assertEqual(self.progress_callback_count, 0)
-            with patch("adb_shell.adb_device.AdbDevice.stat", self.fake_stat):
+            with patch("adb_shell_wifi.adb_device.AdbDevice.stat", self.fake_stat):
                 self.device.pull('/data', 'TEST_FILE', progress_callback=self.progress_callback)
             
             self.assertEqual(self.progress_callback_count, 1)

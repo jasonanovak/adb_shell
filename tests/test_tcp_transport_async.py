@@ -2,8 +2,8 @@ import asyncio
 import unittest
 from unittest.mock import patch
 
-from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.transport.tcp_transport_async import TcpTransportAsync
+from adb_shell_wifi.exceptions import TcpTimeoutException
+from adb_shell_wifi.transport.tcp_transport_async import TcpTransportAsync
 
 from .async_patchers import FakeStreamReader, FakeStreamWriter, async_patch
 from .async_wrapper import awaiter
