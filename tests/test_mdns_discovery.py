@@ -10,7 +10,7 @@ try:
 except ImportError:  # pragma: no cover
     from mock import patch, MagicMock
 
-from adb_shell.mdns import (
+from adb_shell_wifi.mdns import (
     AdbService,
     SERVICE_TYPE_PAIRING,
     SERVICE_TYPE_TLS_CONNECT,
@@ -18,7 +18,7 @@ from adb_shell.mdns import (
     discover_pairing_services,
     discover_services,
 )
-from adb_shell.mdns import discovery as discovery_mod
+from adb_shell_wifi.mdns import discovery as discovery_mod
 
 
 def _fake_service_info(addresses, port):
@@ -139,7 +139,7 @@ class DiscoverServicesAsyncTest(unittest.TestCase):
         # The async path requires zeroconf.asyncio to be importable; we
         # verify it loads cleanly. Behavior is exercised by the manual
         # E2E sweep against a live LAN.
-        from adb_shell.mdns.discovery_async import (  # noqa: F401
+        from adb_shell_wifi.mdns.discovery_async import (  # noqa: F401
             discover_connect_services_async,
             discover_pairing_services_async,
             discover_services_async,
@@ -148,7 +148,7 @@ class DiscoverServicesAsyncTest(unittest.TestCase):
     def test_async_returns_empty_for_no_services(self):
         # When nothing matches, the async API should return an empty list
         # (and not raise). We use a tiny timeout so the test is fast.
-        from adb_shell.mdns.discovery_async import discover_services_async
+        from adb_shell_wifi.mdns.discovery_async import discover_services_async
 
         async def go():
             return await discover_services_async(

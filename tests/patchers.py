@@ -8,9 +8,9 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell import constants
-from adb_shell.adb_message import AdbMessage
-from adb_shell.transport.tcp_transport import TcpTransport
+from adb_shell_wifi import constants
+from adb_shell_wifi.adb_message import AdbMessage
+from adb_shell_wifi.transport.tcp_transport import TcpTransport
 
 
 ASYNC_SKIPPER=unittest.skipIf(sys.version_info.major < 3 or sys.version_info.minor < 7, "Async functionality requires Python 3.7+")
@@ -121,4 +121,4 @@ PATCH_SELECT_FAIL = patch('select.select', return_value=(False, False, False))
 
 
 # `TcpTransport` patches
-PATCH_TCP_TRANSPORT = patch('adb_shell.adb_device.TcpTransport', FakeTcpTransport)
+PATCH_TCP_TRANSPORT = patch('adb_shell_wifi.adb_device.TcpTransport', FakeTcpTransport)

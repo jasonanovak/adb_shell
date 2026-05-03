@@ -12,7 +12,7 @@ the random port a paired device's TLS data channel is listening on.
 
 import sys
 
-from adb_shell.mdns import (
+from adb_shell_wifi.mdns import (
     SERVICE_TYPE_PAIRING,
     SERVICE_TYPE_TLS_CONNECT,
     discover_services,

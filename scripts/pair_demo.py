@@ -17,7 +17,7 @@ must exist at <adbkey-path> + ".pub".
 import os
 import sys
 
-from adb_shell.pairing import pair
+from adb_shell_wifi.pairing import pair
 
 
 def main():

@@ -5,8 +5,8 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell.exceptions import TcpTimeoutException
-from adb_shell.transport.tcp_transport import TcpTransport
+from adb_shell_wifi.exceptions import TcpTimeoutException
+from adb_shell_wifi.transport.tcp_transport import TcpTransport
 
 from . import patchers
 

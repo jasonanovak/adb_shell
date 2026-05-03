@@ -6,15 +6,15 @@ try:
 except ImportError:
     from mock import patch
 
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+from adb_shell_wifi.auth.keygen import keygen
+from adb_shell_wifi.auth.sign_pythonrsa import PythonRSASigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestPythonRSASigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
@@ -34,15 +34,15 @@ class TestPythonRSASigner(unittest.TestCase):
 
 class TestPythonRSASignerExceptions(unittest.TestCase):
     def test_value_error(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', return_value=([None, [None]], None)):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
+            with patch('adb_shell_wifi.auth.sign_pythonrsa.decoder.decode', return_value=([None, [None]], None)):
                 with self.assertRaises(ValueError):
                     keygen('tests/adbkey')
                     self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')
 
     def test_index_error(self):
-        with patch('adb_shell.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
-            with patch('adb_shell.auth.sign_pythonrsa.decoder.decode', side_effect=IndexError):
+        with patch('adb_shell_wifi.auth.sign_pythonrsa.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
+            with patch('adb_shell_wifi.auth.sign_pythonrsa.decoder.decode', side_effect=IndexError):
                 with self.assertRaises(ValueError):
                     keygen('tests/adbkey')
                     self.signer = PythonRSASigner.FromRSAKeyPath('tests/adbkey')

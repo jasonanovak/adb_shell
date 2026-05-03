@@ -1,6 +1,6 @@
 import struct
 
-from adb_shell import constants
+from adb_shell_wifi import constants
 
 
 class FileSyncMessage(object):  # pylint: disable=too-few-public-methods

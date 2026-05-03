@@ -9,12 +9,12 @@ import unittest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from adb_shell import constants, exceptions
-from adb_shell.adb_device import AdbDevice, AdbDeviceTls
-from adb_shell.adb_device_async import AdbDeviceAsync, AdbDeviceTlsAsync
-from adb_shell.adb_message import AdbMessage
-from adb_shell.transport.base_transport import BaseTransport
-from adb_shell.transport.base_transport_async import BaseTransportAsync
+from adb_shell_wifi import constants, exceptions
+from adb_shell_wifi.adb_device import AdbDevice, AdbDeviceTls
+from adb_shell_wifi.adb_device_async import AdbDeviceAsync, AdbDeviceTlsAsync
+from adb_shell_wifi.adb_message import AdbMessage
+from adb_shell_wifi.transport.base_transport import BaseTransport
+from adb_shell_wifi.transport.base_transport_async import BaseTransportAsync
 
 
 # An RSA key shared across tests; expensive to generate, so do it once.

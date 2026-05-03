@@ -9,15 +9,15 @@ except ImportError:
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 
-from adb_shell.auth.keygen import keygen
-from adb_shell.auth.sign_cryptography import CryptographySigner
+from adb_shell_wifi.auth.keygen import keygen
+from adb_shell_wifi.auth.sign_cryptography import CryptographySigner
 
 from .keygen_stub import open_priv_pub
 
 
 class TestCryptographySigner(unittest.TestCase):
     def setUp(self):
-        with patch('adb_shell.auth.sign_cryptography.open', open_priv_pub), patch('adb_shell.auth.keygen.open', open_priv_pub):
+        with patch('adb_shell_wifi.auth.sign_cryptography.open', open_priv_pub), patch('adb_shell_wifi.auth.keygen.open', open_priv_pub):
             keygen('tests/adbkey')
             self.signer = CryptographySigner('tests/adbkey')
 

@@ -2,10 +2,10 @@
 
 import unittest
 
-from adb_shell.exceptions import TcpTimeoutException
+from adb_shell_wifi.exceptions import TcpTimeoutException
 
 try:
-    from adb_shell.transport.usb_transport import UsbTransport
+    from adb_shell_wifi.transport.usb_transport import UsbTransport
 except (ImportError, OSError):
     UsbTransport = None
 

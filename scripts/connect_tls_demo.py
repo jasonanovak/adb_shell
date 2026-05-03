@@ -31,7 +31,7 @@ succeeds and prints the device banner.
 import os
 import sys
 
-from adb_shell.adb_device import AdbDeviceTls
+from adb_shell_wifi.adb_device import AdbDeviceTls
 
 
 def main():

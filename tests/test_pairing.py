@@ -12,15 +12,15 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import ExtensionOID, NameOID
 
-from adb_shell.auth.x509 import (
+from adb_shell_wifi.auth.x509 import (
     certificate_to_pem,
     generate_x509_certificate,
     load_rsa_private_key_pem,
     private_key_to_pem,
 )
-from adb_shell.pairing import constants as pconst
-from adb_shell.pairing.auth import PairingAuthCtx, ROLE_CLIENT, ROLE_SERVER, _build_nonce
-from adb_shell.pairing.connection import (
+from adb_shell_wifi.pairing import constants as pconst
+from adb_shell_wifi.pairing.auth import PairingAuthCtx, ROLE_CLIENT, ROLE_SERVER, _build_nonce
+from adb_shell_wifi.pairing.connection import (
     PairingConnection,
     PairingException,
     PeerInfo,
